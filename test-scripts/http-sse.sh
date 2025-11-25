@@ -1,0 +1,1 @@
+go run main.go http sse --destination "http://localhost:8000/GetNotifications?user_id=u1" --conc 10 --reqn 100

@@ -1,0 +1,1 @@
+go run main.go http cs --destination "http://localhost:8000/upload" --conc 10 --reqn 100 --size 2147483648
