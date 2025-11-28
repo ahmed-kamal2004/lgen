@@ -21,12 +21,14 @@ func NewGrpcCommand() *cobra.Command {
 	var req_num int
 	var targetMethod string
 	var timeout int
+	var file_size int
 
 	grpcCmd.Flags().StringVar(&destination, "destination", "", "Destination Address")
 	grpcCmd.Flags().StringVar(&targetMethod, "tarm", "", "Target method to test on it")
 	grpcCmd.Flags().StringVar(&proto_path, "proto", "", "Path to the target proto file")
 	grpcCmd.Flags().IntVar(&req_num, "reqn", 10 , "Number of requests")
 	grpcCmd.Flags().IntVar(&timeout, "timeout", 5, "Timeout for the requests")
+	grpcCmd.Flags().IntVar(&file_size, "size", 1024, "File size for Client streaming load generation")
 
 	return grpcCmd
 }
@@ -37,6 +39,7 @@ func grpcExecute(cmd *cobra.Command, args []string) error {
 	dest, _ := cmd.Flags().GetString("destination")
 	req_num, _ := cmd.Flags().GetInt("reqn")
 	timeout, _ := cmd.Flags().GetInt("timeout")
+	file_size, _ := cmd.Flags().GetInt("size")
 
 	method := getMethod(cmd)
 
@@ -44,10 +47,10 @@ func grpcExecute(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	grpc_req := grpc.GenerateGrpcReq(dest, method, req_num, timeout)
+	grpc_req := grpc.GenerateGrpcReq(dest, method, req_num, timeout, file_size)
 
 	if grpc_req != nil {
-		grpc_req.GenerateGenericLoad()
+		grpc_req.GenerateLoad()
 	}
 	return nil
 }

@@ -75,7 +75,7 @@ func GenerateHttpReq(destination string, requestbody_path string, reqNum int, wo
 }
 
 func (h *HttpReq) GenerateSseLoad(){
-	client := h.GenerateClient(true) // timeout for SSE
+	client := h.generateClient(true) // timeout for SSE
 	var wg sync.WaitGroup
 	var result_collector sync.WaitGroup
 	output := make(chan sseRequestStat)
@@ -117,7 +117,7 @@ func (h *HttpReq) GenerateSseLoad(){
 
 
 func (h *HttpReq) GenerateGenericLoad() {
-	client := h.GenerateClient(false) // no timeout for Generic Unary
+	client := h.generateClient(false) // no timeout for Generic Unary
 	var wg sync.WaitGroup
 	var result_collector sync.WaitGroup
 	output := make(chan requestStat)
@@ -157,7 +157,7 @@ func (h *HttpReq) GenerateGenericLoad() {
 }
 
 func (h *HttpReq) GenerateCsLoad() {
-	client := h.GenerateClient(false)
+	client := h.generateClient(false)
 
 	// Generate file
 	var err error
@@ -218,7 +218,7 @@ func (h *HttpReq) GenerateCsLoad() {
 
 ///////////////////////// Internal Methods /////////////////////////
 
-func (h *HttpReq) GenerateClient(need_timeout bool) *http.Client {
+func (h *HttpReq) generateClient(need_timeout bool) *http.Client {
 	var timeout int = 0 
 	if need_timeout { // for unary, else for SSE no timeout
 		timeout = h.timeout
