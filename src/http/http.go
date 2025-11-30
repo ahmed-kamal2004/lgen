@@ -3,6 +3,7 @@ package http
 import (
 	"bufio"
 	"fmt"
+	"generator/load/src/util"
 	"io"
 	"net/http"
 	"os"
@@ -75,6 +76,7 @@ func GenerateHttpReq(destination string, requestbody_path string, reqNum int, wo
 }
 
 func (h *HttpReq) GenerateSseLoad(){
+	time_before := time.Now()
 	client := h.generateClient(true) // timeout for SSE
 	var wg sync.WaitGroup
 	var result_collector sync.WaitGroup
@@ -89,12 +91,15 @@ func (h *HttpReq) GenerateSseLoad(){
 		var total_latency float32 = 0
 		var total_count int = 0
 		var successful int = 0
+		var total_events int = 0
 		for {
 			select {
 			case val, ok := <-ch:
 				if !ok {
 					fmt.Printf("Average Latency: %.3f\n", total_latency/float32(total_count))
 					fmt.Printf("Total Success percent: %.2f%%\n", float32(successful)/float32(total_count)*100)
+					fmt.Printf("Total number of requests: %d\n", total_count)
+					fmt.Printf("Average Events: %d\n", total_events/total_count)
 					return
 				}
 				println("Latency: ", val.latency)
@@ -102,6 +107,7 @@ func (h *HttpReq) GenerateSseLoad(){
 				println("Successful: ", val.successful)
 				total_latency += val.latency
 				total_count ++
+				total_events += val.events
 				if val.successful {
 					successful ++
 				}
@@ -113,10 +119,17 @@ func (h *HttpReq) GenerateSseLoad(){
 	wg.Wait()
 	close(output)
 	result_collector.Wait()
+
+	time_after := time.Now()
+	total_time_taken := time_after.Sub(time_before).Seconds()
+
+	fmt.Printf("Total time taken: %.4f Second\n", float32(total_time_taken))
+	fmt.Printf("Total throughput: %.4f Request/Second\n", float32(h.reqNum)/float32(total_time_taken))
 }
 
 
 func (h *HttpReq) GenerateGenericLoad() {
+	time_before := time.Now()
 	client := h.generateClient(false) // no timeout for Generic Unary
 	var wg sync.WaitGroup
 	var result_collector sync.WaitGroup
@@ -137,6 +150,7 @@ func (h *HttpReq) GenerateGenericLoad() {
 				if !ok {
 					fmt.Printf("Average Latency: %.3f\n", total_latency/float32(total_count))
 					fmt.Printf("Total Success percent: %.2f%%\n", float32(successful)/float32(total_count)*100)
+					fmt.Printf("Total number of requests: %d\n", total_count)
 					return
 				}
 				println("Latency: ", val.latency)
@@ -154,31 +168,30 @@ func (h *HttpReq) GenerateGenericLoad() {
 	wg.Wait()
 	close(output)
 	result_collector.Wait()
+
+	time_after := time.Now()
+	total_time_taken := time_after.Sub(time_before).Seconds()
+
+	fmt.Printf("Total time taken: %.4f Second\n", float32(total_time_taken))
+	fmt.Printf("Total throughput: %.4f Request/Second\n", float32(h.reqNum)/float32(total_time_taken))
 }
 
 func (h *HttpReq) GenerateCsLoad() {
 	client := h.generateClient(false)
 
+	time_before := time.Now()
+
 	// Generate file
-	var err error
-	var filepath string  = ""
-	filepath, err = os.Getwd()
+	filepath, err := util.GenerateFile("demo.txt", h.fileSize)
 	if err != nil {
-		return
+		return 
 	}
-	filepath = filepath + "/demo.txt"
-
-	err = os.WriteFile(filepath, make([]byte, h.fileSize), os.FileMode(777))
-	if err != nil {
-		return
-	}
-
 	var wg sync.WaitGroup
 	var result_collector sync.WaitGroup
 	output := make(chan csRequestStat)
 	for i:= 0; i < h.reqNum; i++ {
 		wg.Add(1)
-		go h.generate_one_cs_load(client, &wg, output)
+		go h.generate_one_cs_load(client, &wg, output, filepath)
 	}
 	go func (ch <- chan csRequestStat, wg *sync.WaitGroup)  {
 		wg.Add(1)
@@ -192,6 +205,7 @@ func (h *HttpReq) GenerateCsLoad() {
 				if !ok {
 					fmt.Printf("Average Latency: %.3f\n", total_latency/float32(total_count))
 					fmt.Printf("Total Success percent: %.2f%%\n", float32(successful)/float32(total_count)*100)
+					fmt.Printf("Total number of requests: %d\n", total_count)
 					return
 				}
 				println("Latency: ", val.latency)
@@ -210,9 +224,14 @@ func (h *HttpReq) GenerateCsLoad() {
 	close(output)
 	result_collector.Wait()
 
+	time_after := time.Now()
+	total_time_taken := time_after.Sub(time_before).Seconds()
+
+	fmt.Printf("Total time taken: %.4f Second\n", float32(total_time_taken))
+	fmt.Printf("Total throughput: %.4f Request/Second\n", float32(h.reqNum)/float32(total_time_taken))
+
 	// Delete the generated file
 	os.Remove(filepath)
-
 	return
 }
 
@@ -319,14 +338,12 @@ func (h *HttpReq) generate_one_sse_load(client * http.Client, wg *sync.WaitGroup
 }
 
 
-func (h *HttpReq) generate_one_cs_load(client * http.Client, wg *sync.WaitGroup, ch chan csRequestStat){
+func (h *HttpReq) generate_one_cs_load(client * http.Client, wg *sync.WaitGroup, ch chan csRequestStat, path string){
 	defer wg.Done()
-	filepath, err := os.Getwd()
-	filepath = filepath + "/demo.txt"
 
-	file, err := os.Open(filepath)
+	file, err := os.Open(path)
 	if err != nil {
-		println("Unable to open file: ", filepath)
+		println("Unable to open file: ", path)
 		ch <- csRequestStat{}
 		return
 	}

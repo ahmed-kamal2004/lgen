@@ -24,7 +24,7 @@ func NewCsCommand() *cobra.Command {
 	cmd.Flags().IntVar(&workerconc, "conc", 1, "Number of concurrent requests at the same time")
 	cmd.Flags().IntVar(&timeout, "timeout", 10, "Maximum number of seconds per request")
 	cmd.Flags().IntVar(&maxretries, "maxr", 3, "Maximum number of retries per failed request")
-	cmd.Flags().IntVar(&size, "size", 16 * 1024*1024, "Size of the file to be uploaded.")
+	cmd.Flags().IntVar(&size, "size", 1024*1024, "Size of the file to be uploaded.")
 
 	cmd.MarkFlagRequired("url")
 	cmd.MarkFlagRequired("address")

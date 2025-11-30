@@ -51,6 +51,16 @@ func (g *grpcReq) GenerateLoad() {
 	var wg sync.WaitGroup
 	var result_collector sync.WaitGroup
 
+	var path string = ""
+	if g.method.IsClientStreaming() {
+		var err error = nil
+		path, err = util.GenerateFile("demo.txt", g.file_size)
+		if err != nil {
+			// println(err.Error())
+			return 
+		}
+	}
+
 	time_before := time.Now()
 	// Shared between requests
 	conn, err := grpc.Dial(g.destination, grpc.WithInsecure())
@@ -63,11 +73,6 @@ func (g *grpcReq) GenerateLoad() {
 		if !g.method.IsClientStreaming() && !g.method.IsServerStreaming() {
 			go g.generate_one_generic_load(conn, &wg, output)
 		} else if g.method.IsClientStreaming() && !g.method.IsServerStreaming() {
-			path, err := util.GenerateFile("demo.txt", g.file_size)
-			if err != nil {
-				println(err.Error())
-				return 
-			}
 			go g.generate_one_clients_load(conn, &wg, output, path)
 		} else if g.method.IsServerStreaming() && !g.method.IsClientStreaming() {
 			go g.generate_one_servers_load(conn, &wg, output)
@@ -89,6 +94,7 @@ func (g *grpcReq) GenerateLoad() {
 					fmt.Println("\n\n\n############################################  Final Results  #########################################################\n\n\n")
 					fmt.Printf("Average Latency: %.3f Second\n", total_latency/float32(total_count))
 					fmt.Printf("Total Success percent: %.2f%%\n", float32(successful)/float32(total_count)*100)
+					fmt.Printf("Total number of requests: %d\n", total_count)
 					fmt.Printf("Average Events: %d\n", total_events/total_count)
 					return
 				}
@@ -118,7 +124,9 @@ func (g *grpcReq) GenerateLoad() {
 	fmt.Printf("Total time taken: %.4f Second\n", float32(total_time_taken))
 	fmt.Printf("Total throughput: %.4f Request/Second\n", float32(g.req_num)/float32(total_time_taken))
 
-
+	if g.method.IsClientStreaming() {
+		os.Remove(path)
+	}
 }
 
 /// Internal
@@ -246,7 +254,6 @@ func (g *grpcReq) generate_one_servers_load(conn *grpc.ClientConn, wg *sync.Wait
 func (g *grpcReq) generate_one_clients_load(conn *grpc.ClientConn, wg *sync.WaitGroup, ch chan reqStat, file_path string) {
 	defer wg.Done()
 
-	println("Here")
 	stream, err := conn.NewStream(
 		context.Background(),
 		&grpc.StreamDesc{
@@ -273,23 +280,20 @@ func (g *grpcReq) generate_one_clients_load(conn *grpc.ClientConn, wg *sync.Wait
 
 	file, err := os.Open(file_path)
 	if err != nil {
-		println(err.Error())
 		ch <- reqStat{}
 		return
 	}
 	defer file.Close()
 
-	buf := make([]byte, 1024*1)
+	buf := make([]byte, 1024*1024)
 	time_before := time.Now()
 
 	for {
 		n, err := file.Read(buf)
 		if err == io.EOF {
-			println(err.Error())
 			break
 		}
 		if err != nil {
-			println(err.Error())
 			ch <- reqStat{}
 			return
 		}
@@ -303,20 +307,17 @@ func (g *grpcReq) generate_one_clients_load(conn *grpc.ClientConn, wg *sync.Wait
 
 		if err := stream.SendMsg(msg); err != nil {
 			ch <- reqStat{}
-			println(err.Error())
 			return
 		}
 	}
 
 	if err := stream.CloseSend(); err != nil {
-		println(err.Error())
 		ch <- reqStat{}
 		return 
 	}
 
 	resp := dynamic.NewMessage(g.method.GetOutputType())
 	if err := stream.RecvMsg(resp); err != nil {
-		println(err.Error())
 		ch <- reqStat{}
 		return
 	}

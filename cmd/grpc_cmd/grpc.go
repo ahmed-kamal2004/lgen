@@ -28,7 +28,7 @@ func NewGrpcCommand() *cobra.Command {
 	grpcCmd.Flags().StringVar(&proto_path, "proto", "", "Path to the target proto file")
 	grpcCmd.Flags().IntVar(&req_num, "reqn", 10 , "Number of requests")
 	grpcCmd.Flags().IntVar(&timeout, "timeout", 5, "Timeout for the requests")
-	grpcCmd.Flags().IntVar(&file_size, "size", 1024, "File size for Client streaming load generation")
+	grpcCmd.Flags().IntVar(&file_size, "size", 1024*1024, "File size for Client streaming load generation")
 
 	return grpcCmd
 }
