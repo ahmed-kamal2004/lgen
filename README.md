@@ -13,9 +13,11 @@ Benchmarking tool for gRPC & HTTP protocols-based web applications
 `go run main.go grpc --proto /home/ahmed-kamal/Downloads/services.proto --destination localhost:50051 --reqn 100000 --tarm sendmessage`
 #### Client Streaming gRPC
 Client streaming is tested by file uploading over chunks, file size can be changed, check `go run main.go grpc help` for details.
+
 `go run main.go grpc --proto /home/ahmed-kamal/Downloads/services.proto --destination localhost:50051 --reqn 100000 --tarm uploadfile`
 #### Server Streaming gRPC
 The main metric that should be cared for during Server streaming is the `number of sent events`
+
 `go run main.go grpc --proto /home/ahmed-kamal/Downloads/services.proto --destination localhost:50051 --reqn 10000 --tarm getnotifications --timeout 10`
 
 ##### Output example
@@ -24,6 +26,7 @@ The main metric that should be cared for during Server streaming is the `number 
 ### HTTP
 #### Unary (Currently POST requests are the only supported HTTP request type for now)
 for POST requests, the request body should be specified.
+
 `go run main.go http --destination "http://localhost:8000/SendMessage" --reqn 100 --method POST --reqb_path test-scripts/body.json`
 #### Client Streaming (Simulated using File upload)
 `go run main.go http cs --destination "http://localhost:8000/upload" --reqn 100 --size 2147483648`
