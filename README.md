@@ -1,5 +1,3 @@
-<img width="1024" height="1024" alt="lgen" src="https://github.com/user-attachments/assets/5b24a0a3-a221-4dfe-8075-5ad19e5d199b" />
-
 # lgen
 Benchmarking tool for gRPC & HTTP protocols-based web applications
 > Currently lgen is in the PoC period, not production ready (you can use it, as long as, you are aware of it's limitations)
